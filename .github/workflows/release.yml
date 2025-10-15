@@ -1,0 +1,42 @@
+# Release Workflow
+# Automated CI/CD pipeline triggered on push to main branch
+
+name: Release
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  image_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+      
+      - name: Determine image tag
+        id: tag
+        uses: KoalaOps/determine-image-tag@v1
+        with:
+          tag_format: branch-date-counter
+          include_counter: true
+
+  build:
+    needs: image_tag
+    uses: ./.github/workflows/build_image.yml
+    secrets: inherit
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    with:
+      service_name: existing-single-central-noport-noingress-noautodeploy-20251015165443
+      tag:          ${{ needs.image_tag.outputs.tag }}
+      ref:          ${{ github.sha }}
